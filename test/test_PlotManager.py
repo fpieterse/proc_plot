@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 
-import df_plot
-df_plot.DEBUG = True
+import sys
+sys.path.append('..')
+import proc_plot
+
+proc_plot.DEBUG = True
 
 import pandas
 import pickle
@@ -9,22 +12,22 @@ import pickle
 test_count = 0
 pass_count = 0
 
-with open('data.pkl','rb') as f:
+with open('../data.pkl','rb') as f:
     df = pickle.load(f)
 
-df_plot.set_dataframe(df)
+proc_plot.set_dataframe(df)
 
 # Setup: get some gui elements
 tagtool_list = None
 plot_window = None
 plot_manager = None
 
-for c in df_plot.main_window.children():
-    if type(c) == df_plot.PlotWindow:
+for c in proc_plot.main_window.children():
+    if type(c) == proc_plot.PlotWindow:
         plot_window = c
-    elif type(c) == df_plot.TagToolList:
+    elif type(c) == proc_plot.TagToolList:
         tagtool_list = c
-    elif type(c) == df_plot.PlotManager:
+    elif type(c) == proc_plot.PlotManager:
         plot_manager = c
 
 assert plot_window != None, "Fail: couldn't find plot_window"
@@ -132,8 +135,23 @@ if len(plot_manager._groupid_plots) != 1:
     print(plot_manager._groupid_plots)
     exit(1)
 
+############################################################################
+# --- TEST:  colors, groupids, rules                                   --- #
+############################################################################
+############################################################################
 
-df_plot.show()
+var = ['1LIQCV01.READVALUE']
+col = ['C0']
+gid = ['1LIQCV01']
+
+for i in range(len(var)):
+    taginfo = plot_manager._taginfo[var[i]]
+    assert taginfo.groupid == gid[i], \
+        '1LIQCV01.READVALUE groupid is {}'.format(taginfo.groupid)
+    assert taginfo.color == col[i], \
+        '1LIQCV01.READVALUE color is {}'.format(taginfo.color)
+
+proc_plot.show()
 
 print("All tests passed")
 input("Press enter to continue")

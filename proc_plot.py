@@ -8,6 +8,8 @@ import sys
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavBar
 
+import re
+
 from PyQt5 import QtCore
 from PyQt5.QtCore import QObject
 
@@ -21,6 +23,30 @@ from PyQt5.QtWidgets import (
         QPushButton,
         QScrollArea)
 
+class TagInfoRule():
+    def __init__(self,expr,color,sub=None):
+        self.expr = expr
+        self.rexpr = re.compile(expr)
+        self.sub = sub
+        self.color = color
+
+    def get_groupid(self,tagname):
+        if DEBUG:
+            print('Evaluating rule {}'.format(self.expr))
+
+        m = self.rexpr.match(tagname)
+        if m:
+            if self.sub:
+                return self.rexpr.sub(self.sub,tagname)
+            else:
+                return m.group(1)
+        else:
+            return None
+        
+    def get_color(self,tagname):
+        return self.color
+        
+        
 class PlotInfo():
     def __init__(self,tagname,groupid,ax):
         self.tagnames = [tagname]
@@ -44,16 +70,26 @@ class TagInfo():
 
     '''
 
+    taginfo_rules = [
+        TagInfoRule(expr=r'(.*)\.READVALUE',color='C0'),
+        TagInfoRule(expr=r'(.*)\.SSVALUE',color='cyan'),
+        TagInfoRule(expr=r'(.*)\.HIGHLIMIT',color='red'),
+        TagInfoRule(expr=r'(.*)\.LOWLIMIT',color='red'),
+    ]
+
     def __init__(self,tagname):
         self.name = tagname
         self.plotinfo = None # points to a plotinfo if tag is plotted
-        self.color = 'black'
 
-        p = tagname.find('.')
-        if p > 0:
-            self.groupid = tagname[:p]
-        else:
-            self.groupid = None
+        self.groupid = None
+        self.color = 'black'
+        for rule in self.taginfo_rules:
+            gid = rule.get_groupid(self.name)
+            if gid != None:
+                self.groupid=gid
+                self.color = rule.get_color(self.name)
+                break
+
 
     def set_color(self,color):
         sys.stderr.write("changing colors is not implemeted yet.\n'")
@@ -87,6 +123,18 @@ class PlotManager(QObject):
         for tag in self._df:
             self._taginfo[tag] = TagInfo(tag)
 
+
+    def replot(self,plotinfo):
+        '''
+        Replot the ax in plotinfo.  Used when adding/removing tags
+        '''
+        plotinfo.ax.clear()
+        color = []
+        for tag in plotinfo.tagnames:
+            color.append( self._taginfo[tag].color )
+        self._df[plotinfo.tagnames].plot(
+            color=color,
+            ax=plotinfo.ax)
 
     def add_plot(self,tag):
         taginfo = self._taginfo[tag]
@@ -126,9 +174,9 @@ class PlotManager(QObject):
             self._plotinfo.append(plotinfo)
             self._taginfo[tag].plotinfo = plotinfo
             self._groupid_plots[groupid] = plotinfo
+        
+        self.replot(plotinfo)
 
-        self._df[tag].plot(c=taginfo.color,
-                           ax=plotinfo.ax)
 
     def remove_plot(self,tag):
         taginfo = self._taginfo[tag]
@@ -146,10 +194,7 @@ class PlotManager(QObject):
                 print("Remaining tags:")
                 print(plotinfo.tagnames)
 
-            plotinfo.ax.clear()
-            self._df[plotinfo.tagnames].plot(
-                ax=plotinfo.ax
-            )
+            self.replot(plotinfo)
 
         else:
             # remove whole axes
