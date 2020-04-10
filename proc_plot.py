@@ -282,14 +282,10 @@ class TagTool(QWidget):
         self.plot_button.setCheckable(True)
         self.plot_button.toggled.connect(self.plot_clicked)
 
-        other_button = QPushButton('>')
-        other_button.setMinimumWidth(30)
-
         layout = QHBoxLayout()
         layout.setContentsMargins(0,0,0,0)
         layout.setSpacing(0)
         layout.addWidget(self.plot_button,1)
-        layout.addWidget(other_button,0)
 
 
         self.setLayout(layout)
