@@ -31,9 +31,6 @@ class TagInfoRule():
         self.color = color
 
     def get_groupid(self,tagname):
-        if DEBUG:
-            print('Evaluating rule {}'.format(self.expr))
-
         m = self.rexpr.match(tagname)
         if m:
             if self.sub:
@@ -136,6 +133,8 @@ class PlotManager(QObject):
             color=color,
             ax=plotinfo.ax)
 
+        self._fig.tight_layout()
+
     def add_plot(self,tag):
         taginfo = self._taginfo[tag]
 
@@ -144,8 +143,9 @@ class PlotManager(QObject):
             return
 
         # check if the groupid has a trend
+        # but only if groupid is not None
         groupid = taginfo.groupid
-        if groupid in self._groupid_plots.keys():
+        if groupid and groupid in self._groupid_plots.keys():
             # add trend to existing axis
             plotinfo = self._groupid_plots[groupid]
             plotinfo.tagnames.append(tag)
@@ -173,7 +173,8 @@ class PlotManager(QObject):
             plotinfo = PlotInfo(tag,groupid,ax)
             self._plotinfo.append(plotinfo)
             self._taginfo[tag].plotinfo = plotinfo
-            self._groupid_plots[groupid] = plotinfo
+            if groupid:
+                self._groupid_plots[groupid] = plotinfo
         
         self.replot(plotinfo)
 
@@ -202,7 +203,8 @@ class PlotManager(QObject):
                 print("Removing axis")
             plotinfo.ax.remove()
             self._plotinfo.remove(plotinfo)
-            del self._groupid_plots[taginfo.groupid] 
+            if taginfo.groupid in self._groupid_plots:
+                del self._groupid_plots[taginfo.groupid] 
 
             nplots = len(self._plotinfo)
             gs = matplotlib.gridspec.GridSpec(nplots,1)
