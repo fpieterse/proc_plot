@@ -184,12 +184,19 @@ class PlotManager(QObject):
         if DEBUG:
             print("PlotManager::add_remove_plot({},{})".format(tag,add))
 
+        interactive = plt.isinteractive()
+        if interactive:
+            plt.ioff()
+
         if add:
             self.add_plot(tag)
         else:
             self.remove_plot(tag)
 
         self._canvas.draw()
+
+        if interactive:
+            plt.ion()
         
 
     
