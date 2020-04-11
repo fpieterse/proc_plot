@@ -25,7 +25,7 @@ plot_manager = None
 for c in proc_plot.main_window.children():
     if type(c) == proc_plot.PlotWindow:
         plot_window = c
-    elif type(c) == proc_plot.TagToolList:
+    elif type(c) == proc_plot.ToolPanel:
         tagtool_list = c
     elif type(c) == proc_plot.PlotManager:
         plot_manager = c
