@@ -15,6 +15,9 @@ proc_plot.set_dataframe(df)
 proc_plot.show()
 ```
 
+## Grouping Rules
+proc_plot uses regular expression rules to group tags that should be plotted on the same axis.
+See `help(proc_plot.add_grouping_rule)` for examples if you want to customise grouping rules.
 
 ## %matplotlib magic
 The intended use of the tool is to call it from a jupyter notebook.  The way the qt gui loop runs in jupyter is tricky.  proc_plot checks the current backend (plt.get_backend) to tell if the notebook is using `%matplotlib qt` or `%matplotlib notebook` before matplotlib was imported.  It is possible to switch the backend after the %matplotlib magic, which could break the application.  I recommend using %matplotlib qt and then switching the backend with `plt.switch_backend('nbagg')` if you want interactive notebook plots later.
