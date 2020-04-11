@@ -25,7 +25,7 @@ from PyQt5.QtWidgets import (
         QScrollArea,)
 
 class TagInfoRule():
-    def __init__(self,expr,color,sub=None):
+    def __init__(self,expr,color,sub=r'\1'):
         self.expr = expr
         self.rexpr = re.compile(expr)
         self.sub = sub
@@ -35,14 +35,11 @@ class TagInfoRule():
         m = self.rexpr.match(tagname)
         if m:
             if self.sub:
-                return self.rexpr.sub(self.sub,tagname)
+                return True, self.rexpr.sub(self.sub,tagname)
             else:
-                return m.group(1)
+                return True, None
         else:
-            return None
-        
-    def get_color(self,tagname):
-        return self.color
+            return False, None
         
         
 class PlotInfo():
@@ -82,10 +79,13 @@ class TagInfo():
         self.groupid = None
         self.color = 'black'
         for rule in self.taginfo_rules:
-            gid = rule.get_groupid(self.name)
-            if gid != None:
+            if DEBUG:
+                print("Evaluating {}".format(rule.rexpr))
+
+            match, gid = rule.get_groupid(self.name)
+            if match:
                 self.groupid=gid
-                self.color = rule.get_color(self.name)
+                self.color = rule.color
                 break
 
 
@@ -375,7 +375,7 @@ class TagTool(QWidget):
     def plot_clicked(self,is_clicked):
         self.add_remove_plot.emit(self.name,is_clicked)
 
-def add_grouping_rule(expr,color,sub=None):
+def add_grouping_rule(expr,color,sub=r'\1'):
     '''
     Add a rule to group trends.
 
@@ -451,13 +451,13 @@ def add_grouping_rule(expr,color,sub=None):
         regular expression to evaluate
     color : str
         matplotlib color of trend where tag matches expr
-    sub : str, None
-        regular expression replacement str to return groupid. If
-        None then return the first match group.
+    sub : str, '\1'
+        regular expression replacement str to return groupid.  If set to None,
+        then a groupid of None is returned (tag is ungrouped).
 
     '''
     TagInfo.taginfo_rules.append(
-        TagInfoRule(expr,color.sub)
+        TagInfoRule(expr,color,sub)
     )
 
 def print_grouping_rules():
@@ -466,10 +466,10 @@ def print_grouping_rules():
     '''
     print("{:<3} {:<60} {:^10} {}".format("","expr","color","sub"))
     print("{:->80}".format(''))
-    for i in range(len(TagInfo.taginfo_rules))
+    for i in range(len(TagInfo.taginfo_rules)):
         rule = TagInfo.taginfo_rules[i]
         if rule.sub == None:
-            sub = '-'
+            sub = 'None'
         else:
             sub = rule.sub
         print("{:<3} {:<60} {:^10} {}"\
