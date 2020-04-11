@@ -282,6 +282,8 @@ class PlotManager(QObject):
 
                 if nrows > 1:
                     code += '    ax=ax[{}],\n'.format(i)
+                else:
+                    code += '    ax=ax,\n'
                     
                 code += ')\n'
 
@@ -460,29 +462,29 @@ def add_grouping_rule(expr,color,sub=r'\1'):
     ---------
 
     Example 1:
-    If sub is None, then the first group is returned as the groupid.  This
-    example returns a tag's stem as the groupid for SP and PV (note OP is not
-    part of the group
+    The default is to return the first regex group as the groupid.  This example
+    returns a tag's stem as the groupid for SP and PV (note OP is not part of
+    the group
 
     expr: r'(.*)\.PV'
     color: 'blue'
-    sub: None
+    sub: r'\\1' (default)
     
     expr: r'(.*)\.SP'
     color: 'yellow'
-    sub: None
+    sub: r'\\1' (default)
    
 
     Example 2:
     If you want to trend experion tags in the same group:
 
     expr:  r'(.*)\.(DACA|PIDA)\.PV'
-    sub:   None
     color: 'blue'
+    sub: r'\\1' (default)
 
     expr:  r'(.*)\.(DACA|PIDA)\.SP'
-    sub:   None
     color: 'yellow'
+    sub: r'\\1' (default)
 
 
     Example 3:
@@ -492,11 +494,11 @@ def add_grouping_rule(expr,color,sub=r'\1'):
     first re group is not the groupid.
 
     expr:   r'([0-9]{2,}.)I([0-9]{4,})'
-    sub:    r'\1C\2'
+    sub:    r'\\1C\\2'
     color: 'blue'
 
     expr:   r'([0-9]{2,}.)C([0-9]{4,})\.SP'
-    sub:    r'\1C\2'
+    sub:    r'\\1C\\2'
     color: 'blue'
 
     tag          groupid
@@ -517,9 +519,10 @@ def add_grouping_rule(expr,color,sub=r'\1'):
         regular expression to evaluate
     color : str
         matplotlib color of trend where tag matches expr
-    sub : str, '\1'
-        regular expression replacement str to return groupid.  If set to None,
-        then a groupid of None is returned (tag is ungrouped).
+    sub : str, optional
+        regular expression replacement str to return groupid.  Default is r'\\1'
+        which returns the first group in expr.  If set to None, then a groupid
+        of None is returned (tag is ungrouped).
 
     '''
 
