@@ -1,4 +1,4 @@
-DEBUG=True
+DEBUG=False
 
 import pandas
 
@@ -17,9 +17,11 @@ from PyQt5.QtWidgets import (
         QApplication,
         QWidget,
         QMainWindow,
+        QMessageBox,
         QTabWidget,
         QVBoxLayout,
         QHBoxLayout,
+        QLabel,
         QLineEdit,
         QPushButton,
         QScrollArea,)
@@ -100,6 +102,7 @@ class PlotManager(QObject):
     Class that manages all the plots.
 
     '''
+
     def __init__(self,df,plot_window,parent=None):
         QObject.__init__(self,parent)
         '''
@@ -246,6 +249,54 @@ class PlotManager(QObject):
 
         if interactive:
             plt.ion()
+
+    @QtCore.pyqtSlot()
+    def showme(self):
+        '''
+        Show python code to generate the current figure.
+        '''
+
+        nrows = len(self._plotinfo)
+        code = ''
+
+        if nrows > 0:
+            code += 'fig,ax = plt.subplots(nrows={},sharex=True)\n'.format(nrows)
+
+            i = 0 
+            for plotinfo in self._plotinfo:
+                color = []
+                for tag in plotinfo.tagnames:
+                    color.append( self._taginfo[tag].color )
+
+                xlim = plotinfo.ax.get_xlim()
+                x0 = pandas.Timestamp(xlim[0],unit='m')
+                x1 = pandas.Timestamp(xlim[1],unit='m')
+                ylim = plotinfo.ax.get_ylim()
+
+                code += 'df.plot(\n' + \
+                        '    y={},\n'.format(plotinfo.tagnames) + \
+                        '    color={},\n'.format(color) + \
+                        '    xlim=("' + x0.strftime('%Y-%m-%d %H:%M') +'",\n' + \
+                        '          "' + x1.strftime('%Y-%m-%d %H:%M') + '"),\n' + \
+                        '    ylim={},\n'.format(ylim)
+
+                if nrows > 1:
+                    code += '    ax=ax[{}],\n'.format(i)
+                    
+                code += ')\n'
+
+                i += 1
+
+
+            code += 'fig.tight_layout()\n'
+
+        print(code)
+
+        QMessageBox.information(None, "Show Me",
+                                      code,
+                                      QMessageBox.Ok, QMessageBox.Ok)
+
+
         
 
     
@@ -269,15 +320,26 @@ class PlotWindow(QWidget):
 
 
 
-class TagToolList(QWidget):
+class ToolPanel(QWidget):
     '''
     Widget that contains all the plotting tools.
 
+
+    Signals:
+    --------
+    showme_clicked
+        Show Me button clicked
     '''
+
+    showme_clicked = QtCore.Signal()
 
     def __init__(self,parent=None):
         QWidget.__init__(self,parent)
         self._tools = []
+
+        showme_button = QPushButton('Show Me')
+        showme_button.clicked.connect(self.showme_clicked)
+
 
         self.filter_textbox = QLineEdit()
         self.filter_textbox.textChanged.connect(self.filter_changed)
@@ -300,12 +362,15 @@ class TagToolList(QWidget):
         self.tool_layout.setContentsMargins(0,0,0,0)
         self.tool_layout.setSpacing(0)
         scroll_layout = QVBoxLayout()
+        scroll_layout.setContentsMargins(0,0,0,0)
+        scroll_layout.setSpacing(0)
         scroll_layout.addLayout(self.tool_layout)
         scroll_layout.addStretch(1)
 
         scroll_widget.setLayout(scroll_layout)
 
         main_layout = QVBoxLayout()
+        main_layout.addWidget(showme_button)
         main_layout.addWidget(self.filter_textbox)
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
@@ -344,13 +409,13 @@ class TagTool(QWidget):
 
     def __init__(self,name,parent_toollist):
         '''
-        Constructing a tool also adds it to its parent TagToolList's layout
+        Constructing a tool also adds it to its parent ToolPanel's layout
 
         Parameters:
         -----------
         name : str
             tagname
-        parent_toollist : TagToolList
+        parent_toollist : ToolPanel
             Qt parent, this tool is also added to the toollist's layout
 
         '''
@@ -504,7 +569,7 @@ def set_dataframe(df):
 
     main_window = QWidget()
     plot_window = PlotWindow(main_window)
-    tool_list = TagToolList(main_window)
+    tool_list = ToolPanel(main_window)
 
     layout = QHBoxLayout()
     layout.addWidget(tool_list,0)
@@ -512,6 +577,11 @@ def set_dataframe(df):
     main_window.setLayout(layout)
 
     plot_manager = PlotManager(df,plot_window,main_window)
+
+    showme_dialog = QMessageBox(main_window)
+
+
+    tool_list.showme_clicked.connect(plot_manager.showme)
 
     for tag in df.columns:
         tool = TagTool(tag,tool_list)
@@ -536,7 +606,8 @@ def show():
 
     main_window.show()
 
-    print('Window is showing')
+    if DEBUG:
+        print("Showing main window")
 
     if _execApp:
         app.exec_()
@@ -554,3 +625,5 @@ if app is None:
     print("app was None")
     app = QApplication([])
 main_window = None
+
+
