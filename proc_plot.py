@@ -66,6 +66,10 @@ class TagInfo():
     '''
 
     taginfo_rules = [
+        TagInfoRule(expr=r'(.*)\.PV',color='C0'),
+        TagInfoRule(expr=r'(.*)\.MEAS',color='C0'),
+        TagInfoRule(expr=r'(.*)\.SP',color='C1'),
+        TagInfoRule(expr=r'(.*)\.SPT',color='C1'),
         TagInfoRule(expr=r'(.*)\.READVALUE',color='C0'),
         TagInfoRule(expr=r'(.*)\.SSVALUE',color='cyan'),
         TagInfoRule(expr=r'(.*)\.HIGHLIMIT',color='red'),
@@ -79,9 +83,6 @@ class TagInfo():
         self.groupid = None
         self.color = 'black'
         for rule in self.taginfo_rules:
-            if DEBUG:
-                print("Evaluating {}".format(rule.rexpr))
-
             match, gid = rule.get_groupid(self.name)
             if match:
                 self.groupid=gid
@@ -456,7 +457,8 @@ def add_grouping_rule(expr,color,sub=r'\1'):
         then a groupid of None is returned (tag is ungrouped).
 
     '''
-    TagInfo.taginfo_rules.append(
+
+    TagInfo.taginfo_rules.insert(0,
         TagInfoRule(expr,color,sub)
     )
 
