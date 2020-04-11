@@ -617,13 +617,16 @@ def show():
 _isInit = False # has the window been initialised with a dataframe?
 _execApp = False # if started with qt, gui loop is running
 if plt.get_backend().lower() == 'nbagg':
-    print("Explicitly running gui loop for nbAgg")
     _execApp = True
+    if DEBUG:
+        print("Explicitly running gui loop for nbAgg")
 
 app = QtCore.QCoreApplication.instance()
 if app is None:
-    print("app was None")
     app = QApplication([])
+    if DEBUG:
+        print("app was None")
+
 main_window = None
 
 
