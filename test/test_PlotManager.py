@@ -5,7 +5,7 @@ sys.path.append('..')
 import proc_plot
 from proc_plot.pp import PlotWindow, ToolPanel, PlotManager
 
-proc_plot.DEBUG = True
+proc_plot.pp.DEBUG = True
 
 import pandas
 import pickle
