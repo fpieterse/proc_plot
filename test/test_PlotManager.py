@@ -3,6 +3,7 @@
 import sys
 sys.path.append('..')
 import proc_plot
+from proc_plot.pp import PlotWindow, ToolPanel, PlotManager
 
 proc_plot.DEBUG = True
 
@@ -22,12 +23,12 @@ tagtool_list = None
 plot_window = None
 plot_manager = None
 
-for c in proc_plot.main_window.children():
-    if type(c) == proc_plot.PlotWindow:
+for c in proc_plot.pp.main_window.children():
+    if type(c) == PlotWindow:
         plot_window = c
-    elif type(c) == proc_plot.ToolPanel:
+    elif type(c) == ToolPanel:
         tagtool_list = c
-    elif type(c) == proc_plot.PlotManager:
+    elif type(c) == PlotManager:
         plot_manager = c
 
 assert plot_window != None, "Fail: couldn't find plot_window"
