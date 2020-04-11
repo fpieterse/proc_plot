@@ -20,8 +20,9 @@ from PyQt5.QtWidgets import (
         QTabWidget,
         QVBoxLayout,
         QHBoxLayout,
+        QLineEdit,
         QPushButton,
-        QScrollArea)
+        QScrollArea,)
 
 class TagInfoRule():
     def __init__(self,expr,color,sub=None):
@@ -268,9 +269,17 @@ class PlotWindow(QWidget):
 
 
 class TagToolList(QWidget):
+    '''
+    Widget that contains all the plotting tools.
+
+    '''
+
     def __init__(self,parent=None):
         QWidget.__init__(self,parent)
         self._tools = []
+
+        self.filter_textbox = QLineEdit()
+        self.filter_textbox.textChanged.connect(self.filter_changed)
 
 
         # scroll_area is the scroll area that
@@ -283,44 +292,67 @@ class TagToolList(QWidget):
         scroll_widget = QWidget(scroll_area)
         scroll_area.setWidget(scroll_widget)
 
-        # tool_layout is the scroll area layout.  Keep it
-        # so that you can add tools to it.
+        # scroll_layout is the scroll area layout, it contains
+        # tool_layout where all the tools are and a bit of stretch
+        # tool_layout is saved so you can add tools to it later
         self.tool_layout = QVBoxLayout()
         self.tool_layout.setContentsMargins(0,0,0,0)
         self.tool_layout.setSpacing(0)
-        scroll_widget.setLayout(self.tool_layout)
+        scroll_layout = QVBoxLayout()
+        scroll_layout.addLayout(self.tool_layout)
+        scroll_layout.addStretch(1)
+
+        scroll_widget.setLayout(scroll_layout)
 
         main_layout = QVBoxLayout()
+        main_layout.addWidget(self.filter_textbox)
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
 
     def add_tagtool(self,tagtool):
         if tagtool.parent() != self:
-            print("parent",tagtool.parent)
-            print("self",self)
-            print("Making me the parent")
+            if DEBUG:
+                print("Changing parent of TagTool")
+                print("{} -> {}".format(tagtool.parent,self))
             tagtool.parent = self
 
         self._tools.append(tagtool)
         self.tool_layout.addWidget(tagtool)
 
-    def disconnect(self):
+    QtCore.pyqtSlot(str)
+    def filter_changed(self,filter_text):
         for tool in self._tools:
-            tool.plot_button.disconnect()
+            if filter_text in tool.name:
+                tool.show()
+            else:
+                tool.hide()
+        
+
 
 class TagTool(QWidget):
     '''
     A Widget that contain buttons to add tags to trends
 
-    Attributes:
-    -----------
+    Signals:
+    --------
     add_remove_plot : QtCore.Signal(str,bool)
-    Signal to add/remove a plot from a plot window.
+        Signal to add/remove a plot from a plot window.
     '''
 
     add_remove_plot = QtCore.Signal(str,bool)
 
     def __init__(self,name,parent_toollist):
+        '''
+        Constructing a tool also adds it to its parent TagToolList's layout
+
+        Parameters:
+        -----------
+        name : str
+            tagname
+        parent_toollist : TagToolList
+            Qt parent, this tool is also added to the toollist's layout
+
+        '''
         QWidget.__init__(self,parent_toollist)
 
 
@@ -343,7 +375,107 @@ class TagTool(QWidget):
     def plot_clicked(self,is_clicked):
         self.add_remove_plot.emit(self.name,is_clicked)
 
+def add_grouping_rule(expr,color,sub=None):
+    '''
+    Add a rule to group trends.
+
+    Each tag (column in dataframe) is passed through a regular expression
+    defined in each rule.  When a rule expression matches the tag, then the tag groupid and color is set
+    as specified by the rule.  Tags with the same groupid is plotted on the same
+    axis.
+
+    The regular expressions are evaluated by the 're' library.  It is advised to
+    set expr and sub as raw strings.
+
+    Some defaults are configured already, try to run print_grouping_rules to see
+    all the defined rules.
+
+    Examples:
+    ---------
+
+    Example 1:
+    If sub is None, then the first group is returned as the groupid.  This
+    example returns a tag's stem as the groupid for SP and PV (note OP is not
+    part of the group
+
+    expr: r'(.*)\.PV'
+    color: 'blue'
+    sub: None
+    
+    expr: r'(.*)\.SP'
+    color: 'yellow'
+    sub: None
    
+
+    Example 2:
+    If you want to trend experion tags in the same group:
+
+    expr:  r'(.*)\.(DACA|PIDA)\.PV'
+    sub:   None
+    color: 'blue'
+
+    expr:  r'(.*)\.(DACA|PIDA)\.SP'
+    sub:   None
+    color: 'yellow'
+
+
+    Example 3:
+    Suppose you have indicators e.g. 00TI1234 that would be the PV of e.g.
+    00TC1234.SP.  In this example, the groupid is set to 00TC1234 for both the
+    TI and the TC.  You need to make use of the substitute string because the
+    first re group is not the groupid.
+
+    expr:   r'([0-9]{2,}.)I([0-9]{4,})'
+    sub:    r'\1C\2'
+    color: 'blue'
+
+    expr:   r'([0-9]{2,}.)C([0-9]{4,})\.SP'
+    sub:    r'\1C\2'
+    color: 'blue'
+
+    tag          groupid
+    ------------------------------
+    00TI1234     00TC1234
+    00TC1234.SP  00TC1234
+    11TC1234.OP  None
+    22FI1001     22FC1234
+    22FC5005.SP  22FC5005
+    33AI1111     33AC1111
+
+
+    
+
+    Parameters:
+    -----------
+    expr : str
+        regular expression to evaluate
+    color : str
+        matplotlib color of trend where tag matches expr
+    sub : str, None
+        regular expression replacement str to return groupid. If
+        None then return the first match group.
+
+    '''
+    TagInfo.taginfo_rules.append(
+        TagInfoRule(expr,color.sub)
+    )
+
+def print_grouping_rules():
+    '''
+    Print all grouping rules.
+    '''
+    print("{:<3} {:<60} {:^10} {}".format("","expr","color","sub"))
+    print("{:->80}".format(''))
+    for i in range(len(TagInfo.taginfo_rules))
+        rule = TagInfo.taginfo_rules[i]
+        if rule.sub == None:
+            sub = '-'
+        else:
+            sub = rule.sub
+        print("{:<3} {:<60} {:^10} {}"\
+            .format(i, rule.expr, rule.color, sub )
+        )
+        
 def set_dataframe(df):
     '''
     Set the dataframe to use for plotting.
