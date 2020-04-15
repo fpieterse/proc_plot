@@ -103,7 +103,7 @@ class PlotManager(QObject):
 
     '''
 
-    def __init__(self,df,plot_window,parent=None):
+    def __init__(self,plot_window,parent=None):
         QObject.__init__(self,parent)
         '''
         Parameters:
@@ -114,19 +114,50 @@ class PlotManager(QObject):
             window where plotting happens
 
         '''
-        self._df = df
-        self._fig = plot_window.fig
-        self._canvas = plot_window.canvas
+        self._df = None
+        self.plot_window = plot_window
+        #self._fig = plot_window.fig
+        if DEBUG:
+            print("navstack when clearing figure")
+            print(self.plot_window.toolbar._nav_stack)
+            print(dir(self.plot_window.toolbar))
+        #self._canvas = plot_window.canvas
 
         self._plotinfo = [] # list of info about plot
         self._groupid_plots = {} # dictionary of plotted groupids
         self._taginfo = {} # dictionary of tags
 
+    def set_dataframe(self,df):
+        self._df = df
+        self.plot_window.fig.clear()
+        self.plot_window.toolbar._nav_stack.clear()
+        self._plotinfo.clear()
+        self._groupid_plots.clear()
+        self._taginfo.clear()
+
         for tag in self._df:
             self._taginfo[tag] = TagInfo(tag)
 
+    def clear_all_plots(self):
+        self._plotinfo.clear()
+        self._groupid_plots.clear()
+        self.plot_window.fig.clear()
+        self.plot_window.toolbar._nav_stack.clear()
+        self.plot_window.canvas.draw()
 
-    def replot(self,plotinfo):
+  
+    @QtCore.pyqtSlot()
+    def refresh(self):
+        if DEBUG:
+            print("PlotManager::refresh")
+
+        for pi in self._plotinfo:
+            self.replot(pi)
+
+        self.plot_window.toolbar._nav_stack.clear()
+        self.plot_window.canvas.draw()
+
+    def replot(self,plotinfo=None):
         '''
         Replot the ax in plotinfo.  Used when adding/removing tags
         '''
@@ -138,7 +169,7 @@ class PlotManager(QObject):
             color=color,
             ax=plotinfo.ax)
 
-        self._fig.tight_layout()
+        self.plot_window.fig.tight_layout()
 
     def add_plot(self,tag):
         taginfo = self._taginfo[tag]
@@ -165,14 +196,18 @@ class PlotManager(QObject):
                 sharex = None
 
             # resize existing axes
+            if DEBUG:
+                print("Resize existing axes")
             gs = matplotlib.gridspec.GridSpec(nplots+1,1)
             for i in range(nplots):
-                self._plotinfo[i].ax.set_position( gs[i].get_position(self._fig) )
+                self._plotinfo[i].ax.set_position( gs[i].get_position(self.plot_window.fig) )
                 self._plotinfo[i].ax.set_subplotspec( gs[i] )
 
-
-            ax = self._fig.add_subplot(
+            if DEBUG:
+                print("Create new axes")
+            ax = self.plot_window.fig.add_subplot(
                 nplots+1,1,nplots+1,
+                label=groupid,
                 sharex=sharex
             )
             plotinfo = PlotInfo(tag,groupid,ax)
@@ -180,7 +215,9 @@ class PlotManager(QObject):
             self._taginfo[tag].plotinfo = plotinfo
             if groupid:
                 self._groupid_plots[groupid] = plotinfo
-        
+       
+        if DEBUG:
+            print("Replotting new axis")
         self.replot(plotinfo)
 
 
@@ -214,8 +251,13 @@ class PlotManager(QObject):
             nplots = len(self._plotinfo)
             gs = matplotlib.gridspec.GridSpec(nplots,1)
             for i in range(nplots):
-                self._plotinfo[i].ax.set_position( gs[i].get_position(self._fig) )
+                self._plotinfo[i].ax.set_position( gs[i].get_position(self.plot_window.fig) )
                 self._plotinfo[i].ax.set_subplotspec( gs[i] )
+
+            if len(self._plotinfo) == 0:
+                if DEBUG:
+                    print("no more plots left")
+                    self.plot_window.toolbar._nav_stack.clear()
 
         taginfo.plotinfo = None
 
@@ -245,7 +287,7 @@ class PlotManager(QObject):
         else:
             self.remove_plot(tag)
 
-        self._canvas.draw()
+        self.plot_window.canvas.draw()
 
         if interactive:
             plt.ion()
@@ -334,6 +376,8 @@ class ToolPanel(QWidget):
     '''
 
     showme_clicked = QtCore.Signal()
+    clear_click_signal = QtCore.Signal()
+    refresh_click_signal = QtCore.Signal()
 
     def __init__(self,parent=None):
         QWidget.__init__(self,parent)
@@ -342,6 +386,11 @@ class ToolPanel(QWidget):
         showme_button = QPushButton('Show Me')
         showme_button.clicked.connect(self.showme_clicked)
 
+        clear_button = QPushButton("Clear")
+        clear_button.clicked.connect(self.clear_clicked)
+
+        refresh_button = QPushButton("Refresh")
+        refresh_button.clicked.connect(self.refresh_click_signal)
 
         self.filter_textbox = QLineEdit()
         self.filter_textbox.textChanged.connect(self.filter_changed)
@@ -372,9 +421,13 @@ class ToolPanel(QWidget):
         scroll_widget.setLayout(scroll_layout)
 
         main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(0,0,0,0)
+        main_layout.setSpacing(0)
         main_layout.addWidget(showme_button)
+        main_layout.addWidget(clear_button)
         main_layout.addWidget(self.filter_textbox)
         main_layout.addWidget(scroll_area)
+        main_layout.addWidget(refresh_button)
         self.setLayout(main_layout)
 
     def add_tagtool(self,tagtool):
@@ -387,13 +440,39 @@ class ToolPanel(QWidget):
         self._tools.append(tagtool)
         self.tool_layout.addWidget(tagtool)
 
-    QtCore.pyqtSlot(str)
+    def remove_tagtools(self):
+        while True:
+            try:
+                tool = self._tools.pop()
+                tool.setParent(None)
+            except IndexError:
+                break
+            except Exception as e:
+                print(e)
+
+
+    @QtCore.pyqtSlot(str)
     def filter_changed(self,filter_text):
         for tool in self._tools:
             if filter_text in tool.name:
                 tool.show()
             else:
                 tool.hide()
+
+    @QtCore.pyqtSlot()
+    def clear_clicked(self):
+        if DEBUG:
+            print("ToolPanel::clear_clicked")
+
+        for tool in self._tools:
+            try:
+                tool.reset()
+            except Exception as e:
+                print(e)
+
+        if DEBUG:
+            print("Emit clear clicked")
+        self.clear_click_signal.emit()
         
 
 
@@ -442,6 +521,11 @@ class TagTool(QWidget):
     @QtCore.pyqtSlot(bool)
     def plot_clicked(self,is_clicked):
         self.add_remove_plot.emit(self.name,is_clicked)
+
+    def reset(self):
+        self.blockSignals(True)
+        self.plot_button.setChecked(False)
+        self.blockSignals(False)
 
 def add_grouping_rule(expr,color,sub=r'\1'):
     '''
@@ -560,39 +644,21 @@ def set_dataframe(df):
     global _isInit
     global _df
     global main_window
+    global tool_list
+    global plot_window
+    global plot_manager
 
     if _isInit:
-        print("Dataframe is already initialised")
-        print("TODO: enable re-initialising")
-        return
+        tool_list.remove_tagtools()
 
-    interactive = plt.isinteractive()
-    if interactive:
-        plt.ioff()
+    plot_manager.set_dataframe(df)
 
-    main_window = QWidget()
-    plot_window = PlotWindow(main_window)
-    tool_list = ToolPanel(main_window)
-
-    layout = QHBoxLayout()
-    layout.addWidget(tool_list,0)
-    layout.addWidget(plot_window,1)
-    main_window.setLayout(layout)
-
-    plot_manager = PlotManager(df,plot_window,main_window)
-
-    showme_dialog = QMessageBox(main_window)
-
-
-    tool_list.showme_clicked.connect(plot_manager.showme)
 
     for tag in df.columns:
         tool = TagTool(tag,tool_list)
         tool.add_remove_plot.connect(plot_manager.add_remove_plot)
     _isInit = True
 
-    if interactive:
-        plt.ion()
 
 def show():
     '''
@@ -617,6 +683,7 @@ def show():
         app.exit()
 
 
+
 _isInit = False # has the window been initialised with a dataframe?
 _execApp = False # if started with qt, gui loop is running
 if plt.get_backend().lower() == 'nbagg':
@@ -630,6 +697,25 @@ if app is None:
     if DEBUG:
         print("app was None")
 
-main_window = None
+interactive = plt.isinteractive()
+if interactive:
+    plt.ioff()
+
+main_window = QWidget()
+plot_window = PlotWindow(main_window)
+plot_manager = PlotManager(plot_window,main_window)
+tool_list = ToolPanel(main_window)
+
+tool_list.showme_clicked.connect(plot_manager.showme)
+tool_list.clear_click_signal.connect(plot_manager.clear_all_plots)
+tool_list.refresh_click_signal.connect(plot_manager.refresh)
+
+layout = QHBoxLayout()
+layout.addWidget(tool_list,0)
+layout.addWidget(plot_window,1)
+main_window.setLayout(layout)
+#del layout
 
 
+if interactive:
+    plt.ion()
