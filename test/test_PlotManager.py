@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import sys
-sys.path.append('..')
+sys.path.insert(0,'..')
 import proc_plot
 from proc_plot.pp import PlotWindow, ToolPanel, PlotManager
 
