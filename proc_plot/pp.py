@@ -1,4 +1,4 @@
-DEBUG=False
+DEBUG=True
 
 import pandas
 
@@ -27,7 +27,7 @@ from PyQt5.QtWidgets import (
         QScrollArea,)
 
 class TagInfoRule():
-    def __init__(self,expr,color,sub=r'\1'):
+    def __init__(self,expr,color=None,sub=r'\1'):
         self.expr = expr
         self.rexpr = re.compile(expr)
         self.sub = sub
@@ -68,14 +68,10 @@ class TagInfo():
     '''
 
     taginfo_rules = [
-        TagInfoRule(expr=r'(.*)\.PV',color='C0'),
-        TagInfoRule(expr=r'(.*)\.MEAS',color='C0'),
-        TagInfoRule(expr=r'(.*)\.SP',color='C1'),
-        TagInfoRule(expr=r'(.*)\.SPT',color='C1'),
-        TagInfoRule(expr=r'(.*)\.READVALUE',color='C0'),
-        TagInfoRule(expr=r'(.*)\.SSVALUE',color='cyan'),
-        TagInfoRule(expr=r'(.*)\.HIGHLIMIT',color='red'),
-        TagInfoRule(expr=r'(.*)\.LOWLIMIT',color='red'),
+        TagInfoRule(expr=r'(.*)\.PV$',color='C0'),
+        TagInfoRule(expr=r'(.*)\.MEAS$',color='C0'),
+        TagInfoRule(expr=r'(.*)\.SP$',color='C1'),
+        TagInfoRule(expr=r'(.*)\.SPT$',color='C1'),
     ]
 
     def __init__(self,tagname):
@@ -83,7 +79,7 @@ class TagInfo():
         self.plotinfo = None # points to a plotinfo if tag is plotted
 
         self.groupid = None
-        self.color = 'black'
+        self.color = None
         for rule in self.taginfo_rules:
             match, gid = rule.get_groupid(self.name)
             if match:
@@ -108,12 +104,6 @@ class PlotManager(QObject):
 
         self._df = None
         self.plot_window = PlotWindow()
-        #self._fig = plot_window.fig
-        if DEBUG:
-            print("navstack when clearing figure")
-            print(self.plot_window.toolbar._nav_stack)
-            print(dir(self.plot_window.toolbar))
-        #self._canvas = plot_window.canvas
 
         self._plotinfo = [] # list of info about plot
         self._groupid_plots = {} # dictionary of plotted groupids
@@ -518,7 +508,7 @@ class TagTool(QWidget):
         self.plot_button.setChecked(False)
         self.blockSignals(False)
 
-def add_grouping_rule(expr,color,sub=r'\1'):
+def add_grouping_rule(expr,color=None,sub=r'\1'):
     '''
     Add a rule to group trends.
 
@@ -605,6 +595,28 @@ def add_grouping_rule(expr,color,sub=r'\1'):
         TagInfoRule(expr,color,sub)
     )
 
+def remove_grouping_rules(index=None):
+    '''
+    Remove grouping rules.
+    Note: Rules are only applied when the dataframe is set, you need to set the
+    dataframe again for this change to apply.
+
+    Parameters:
+    -----------
+    index : int, optional
+        Index of rule to remove. If None, clear all the grouping rules.
+
+    '''
+    global _isInit
+
+    if _isInit:
+        print("Waring: changing the grouping rules will not have an effect",
+              "until you call set_dataframe() again.")
+    if index == None:
+        TagInfo.taginfo_rules.clear()
+    else:
+        TagInfo.taginfo_rules.pop(index)
+
 def print_grouping_rules():
     '''
     Print all grouping rules.
@@ -617,8 +629,12 @@ def print_grouping_rules():
             sub = 'None'
         else:
             sub = rule.sub
+        if rule.color == None:
+            col = 'None'
+        else:
+            col = rule.color
         print("{:<3} {:<60} {:^10} {}"\
-            .format(i, rule.expr, rule.color, sub )
+            .format(i, rule.expr, col, sub )
         )
         
 def set_dataframe(df):
@@ -635,18 +651,18 @@ def set_dataframe(df):
     global _isInit
     global _df
     global main_window
-    global tool_list
+    global tool_panel
     global plot_window
     global plot_manager
 
     if _isInit:
-        tool_list.remove_tagtools()
+        tool_panel.remove_tagtools()
 
     plot_manager.set_dataframe(df)
 
 
     for tag in df.columns:
-        tool = TagTool(tag,tool_list)
+        tool = TagTool(tag,tool_panel)
         tool.add_remove_plot.connect(plot_manager.add_remove_plot)
     _isInit = True
 
@@ -673,14 +689,36 @@ def show():
         app.exec_()
         app.exit()
 
+def set_exec_on_show(on=True):
+    '''
+    Set whether Qt app .exec function should be called on show().  When
+    proc_plot is used in a jupyter notebook with %matplotlib qt magic then the
+    gui loop is already running and starting it again will break the app.
+    proc_plot tries to figure it out automatically but you can override the
+    setting with this function.
 
+    Parameters:
+    -----------
+    on : bool, optional
+        set to False to disable runnnig app.exec.
+
+    '''
+    global _execApp
+    _execApp = on
 
 _isInit = False # has the window been initialised with a dataframe?
-_execApp = False # if started with qt, gui loop is running
-if plt.get_backend().lower() == 'nbagg':
-    _execApp = True
-    if DEBUG:
-        print("Explicitly running gui loop for nbAgg")
+_execApp = True # if started with qt, gui loop is running
+
+if DEBUG:
+    print("Backend: ", plt.get_backend())
+
+if (plt.get_backend().lower() == 'qt5agg' and
+    plt.isinteractive() ):
+    # looks like you are running a jupyter notebook with %matplotlib qt
+    _execApp = False
+    print("It looks like you are running a jupyter notebook with " \
+         +"%matplotlib qt magic.\nThe gui loop is disabled, if you " \
+         +"want to enable it, use proc_plot.set_exec_on_show()")
 
 app = QtCore.QCoreApplication.instance()
 if app is None:
@@ -694,14 +732,14 @@ if interactive:
 
 main_window = QWidget()
 plot_manager = PlotManager(main_window)
-tool_list = ToolPanel(main_window)
+tool_panel = ToolPanel(main_window)
 
-tool_list.showme_clicked.connect(plot_manager.showme)
-tool_list.clear_click_signal.connect(plot_manager.clear_all_plots)
-tool_list.refresh_click_signal.connect(plot_manager.refresh)
+tool_panel.showme_clicked.connect(plot_manager.showme)
+tool_panel.clear_click_signal.connect(plot_manager.clear_all_plots)
+tool_panel.refresh_click_signal.connect(plot_manager.refresh)
 
 layout = QHBoxLayout()
-layout.addWidget(tool_list,0)
+layout.addWidget(tool_panel,0)
 layout.addWidget(plot_manager.plot_window,1)
 main_window.setLayout(layout)
 #del layout

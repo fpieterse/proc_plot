@@ -7,10 +7,12 @@ related tags (e.g. SP and PV) to plot on the same subplot.
 '''
 
 from .pp import add_grouping_rule, \
+                remove_grouping_rules, \
                 print_grouping_rules, \
                 set_dataframe, show
 
 __all__ = ['add_grouping_rule',
+           'remove_grouping_rules',
            'print_grouping_rules',
            'set_dataframe',
            'show']
