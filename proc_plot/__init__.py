@@ -6,7 +6,9 @@ time-indexed dataframe.  Tagnames (columns in dataframe) are analysed to group
 related tags (e.g. SP and PV) to plot on the same subplot.
 '''
 
-from .pp import *
+from .pp import add_grouping_rule, \
+                print_grouping_rules, \
+                set_dataframe, show
 
 __all__ = ['add_grouping_rule',
            'print_grouping_rules',
