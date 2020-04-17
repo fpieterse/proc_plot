@@ -103,19 +103,11 @@ class PlotManager(QObject):
 
     '''
 
-    def __init__(self,plot_window,parent=None):
+    def __init__(self,parent=None):
         QObject.__init__(self,parent)
-        '''
-        Parameters:
-        -----------
-        df : pandas.core.frame.DataFrame
-            dataframe with plot data
-        plot_window : PlotWindow
-            window where plotting happens
 
-        '''
         self._df = None
-        self.plot_window = plot_window
+        self.plot_window = PlotWindow()
         #self._fig = plot_window.fig
         if DEBUG:
             print("navstack when clearing figure")
@@ -347,7 +339,6 @@ class PlotManager(QObject):
 class PlotWindow(QWidget):
     '''
     A single plot window.
-
 
     '''
     def __init__(self,parent=None):
@@ -702,8 +693,7 @@ if interactive:
     plt.ioff()
 
 main_window = QWidget()
-plot_window = PlotWindow(main_window)
-plot_manager = PlotManager(plot_window,main_window)
+plot_manager = PlotManager(main_window)
 tool_list = ToolPanel(main_window)
 
 tool_list.showme_clicked.connect(plot_manager.showme)
@@ -712,7 +702,7 @@ tool_list.refresh_click_signal.connect(plot_manager.refresh)
 
 layout = QHBoxLayout()
 layout.addWidget(tool_list,0)
-layout.addWidget(plot_window,1)
+layout.addWidget(plot_manager.plot_window,1)
 main_window.setLayout(layout)
 #del layout
 
