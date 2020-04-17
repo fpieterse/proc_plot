@@ -435,7 +435,7 @@ class ToolPanel(QWidget):
     @QtCore.pyqtSlot(str)
     def filter_changed(self,filter_text):
         for tool in self._tools:
-            if filter_text in tool.name:
+            if filter_text.lower() in tool.name.lower():
                 tool.show()
             else:
                 tool.hide()
