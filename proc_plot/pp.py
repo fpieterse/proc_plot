@@ -75,6 +75,15 @@ class TagInfo():
     ]
 
     def __init__(self,tagname):
+        '''
+        Constructor
+
+        Parameters:
+        -----------
+        tagname : str
+            name of tag
+        '''
+
         self.name = tagname
         self.plotinfo = None # points to a plotinfo if tag is plotted
 
@@ -117,7 +126,16 @@ class PlotManager(QObject):
         self._taginfo.clear()
 
         for tag in self._df:
-            self._taginfo[tag] = TagInfo(tag)
+            # Check if we can plot the tag
+            dt = self._df[tag].dtype
+            if dt in (float,int,bool):
+                self._taginfo[tag] = TagInfo(tag)
+            else:
+                if DEBUG:
+                    print('Tag {} is not plottable'.format(tag))
+                    print('    dtype is {}'.format(dt))
+                continue
+
 
     def get_tagtools(self):
         '''
@@ -204,6 +222,7 @@ class PlotManager(QObject):
             color=color,
             ax=plotinfo.ax,
             legend=True,
+            include_bool=True,
         )
 
         if save_xlim:
@@ -235,7 +254,8 @@ class PlotManager(QObject):
 
             self._df[tag].plot(color=taginfo.color,
                                ax=plotinfo.ax,
-                               legend=True)
+                               legend=True,
+                               include_bool=True)
 
             plotinfo.ax.set_xlim(xlim)
 
