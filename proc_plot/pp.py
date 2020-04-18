@@ -119,6 +119,17 @@ class PlotManager(QObject):
         for tag in self._df:
             self._taginfo[tag] = TagInfo(tag)
 
+    def get_tagtools(self):
+        '''
+        Get tagtools of all validated _taginfos
+        '''
+        tools = [ TagTool(t) for t in self._taginfo ]
+        for tool in tools:
+            tool.add_remove_plot.connect(self.add_remove_plot)
+
+        return tools
+            
+
     @QtCore.pyqtSlot()
     def home_zoom(self):
         '''
@@ -497,15 +508,12 @@ class ToolPanel(QWidget):
         main_layout.addWidget(refresh_button)
         self.setLayout(main_layout)
 
-    def add_tagtool(self,tagtool):
-        if tagtool.parent() != self:
-            if DEBUG:
-                print("Changing parent of TagTool")
-                print("{} -> {}".format(tagtool.parent,self))
-            tagtool.parent = self
+    def add_tagtools(self,tagtools):
+        for t in tagtools:
+            self._tools.append(t)
+            self.tool_layout.addWidget(t)
 
-        self._tools.append(tagtool)
-        self.tool_layout.addWidget(tagtool)
+            assert t.parent() != None, 'tagtool has no parent'
 
     def remove_tagtools(self):
         while True:
@@ -553,7 +561,7 @@ class TagTool(QWidget):
 
     add_remove_plot = QtCore.Signal(str,bool)
 
-    def __init__(self,name,parent_toollist):
+    def __init__(self,name):
         '''
         Constructing a tool also adds it to its parent ToolPanel's layout
 
@@ -565,8 +573,7 @@ class TagTool(QWidget):
             Qt parent, this tool is also added to the toollist's layout
 
         '''
-        QWidget.__init__(self,parent_toollist)
-
+        QWidget.__init__(self)
 
         self.name = name
         self.plot_button = QPushButton(name)
@@ -578,10 +585,8 @@ class TagTool(QWidget):
         layout.setSpacing(0)
         layout.addWidget(self.plot_button,1)
 
-
         self.setLayout(layout)
 
-        parent_toollist.add_tagtool(self)
 
     @QtCore.pyqtSlot(bool)
     def plot_clicked(self,is_clicked):
@@ -694,7 +699,7 @@ def remove_grouping_rules(index=None):
     global _isInit
 
     if _isInit:
-        print("Waring: changing the grouping rules will not have an effect",
+        print("Warning: changing the grouping rules will not have an effect",
               "until you call set_dataframe() again.")
     if index == None:
         TagInfo.taginfo_rules.clear()
@@ -743,11 +748,8 @@ def set_dataframe(df):
         tool_panel.remove_tagtools()
 
     plot_manager.set_dataframe(df)
+    tool_panel.add_tagtools( plot_manager.get_tagtools() )
 
-
-    for tag in df.columns:
-        tool = TagTool(tag,tool_panel)
-        tool.add_remove_plot.connect(plot_manager.add_remove_plot)
     _isInit = True
 
 
