@@ -104,54 +104,101 @@ class PlotManager(QObject):
 
         self._df = None
         self.plot_window = PlotWindow()
+        self.plot_window.home_zoom_signal.connect(self.home_zoom)
 
         self._plotinfo = [] # list of info about plot
         self._groupid_plots = {} # dictionary of plotted groupids
         self._taginfo = {} # dictionary of tags
 
     def set_dataframe(self,df):
+        self.clear_all_plots()
+
         self._df = df
-        self.plot_window.fig.clear()
-        self.plot_window.toolbar._nav_stack.clear()
-        self._plotinfo.clear()
-        self._groupid_plots.clear()
         self._taginfo.clear()
 
         for tag in self._df:
             self._taginfo[tag] = TagInfo(tag)
 
+    @QtCore.pyqtSlot()
+    def home_zoom(self):
+        '''
+        Sets the zoom level to default.
+        '''
+        if DEBUG:
+            print('PlotManager::home_clicked()')
+
+        try:
+            #plt.margins(0,0.05)
+            if len(self._plotinfo) > 0:
+                for pi in self._plotinfo:
+                    pi.ax.autoscale(axis='x',tight=True)
+                    pi.ax.autoscale(axis='y',tight=False)
+            self.plot_window.canvas.draw()
+
+            
+            
+        except Exception as e:
+            sys.stderr.write(e)
+
+    @QtCore.pyqtSlot()
     def clear_all_plots(self):
-        self._plotinfo.clear()
-        self._groupid_plots.clear()
-        self.plot_window.fig.clear()
-        self.plot_window.toolbar._nav_stack.clear()
-        self.plot_window.canvas.draw()
+        if DEBUG:
+            print('PlotManager::clear_all_plots()')
+
+        try:
+            
+            while len(self._plotinfo) > 0:
+                p = self._plotinfo.pop()
+                for t in p.tagnames:
+                    self._taginfo[t].plotinfo = None
+            
+            self._plotinfo.clear()
+            self._groupid_plots.clear()
+            self.plot_window.fig.clear()
+            self.plot_window.toolbar._nav_stack.clear()
+            self.plot_window.canvas.draw()
+        except Exception as e:
+            sys.stderr.write(e)
+            
 
   
     @QtCore.pyqtSlot()
     def refresh(self):
-        if DEBUG:
-            print("PlotManager::refresh")
+        try:
+            if DEBUG:
+                print("PlotManager::refresh()")
 
-        for pi in self._plotinfo:
-            self.replot(pi)
+            for pi in self._plotinfo:
+                self.replot(pi)
 
-        self.plot_window.toolbar._nav_stack.clear()
-        self.plot_window.canvas.draw()
+            self.plot_window.toolbar._nav_stack.clear()
+            self.plot_window.fig.tight_layout()
+            self.plot_window.canvas.draw()
+        except Exception as e:
+            sys.stderr.write(e)
 
-    def replot(self,plotinfo=None):
+    def replot(self,plotinfo,save_xlim=False):
         '''
         Replot the ax in plotinfo.  Used when adding/removing tags
         '''
-        plotinfo.ax.clear()
-        color = []
-        for tag in plotinfo.tagnames:
-            color.append( self._taginfo[tag].color )
-        self._df[plotinfo.tagnames].plot(
-            color=color,
-            ax=plotinfo.ax)
 
-        self.plot_window.fig.tight_layout()
+        if save_xlim:
+            xlim = plotinfo.ax.get_xlim()
+
+        plotinfo.ax.clear()
+
+        color = [ self._taginfo[t].color for t in plotinfo.tagnames ]
+        self._df.plot(
+            y=plotinfo.tagnames,
+            color=color,
+            ax=plotinfo.ax,
+            legend=True,
+        )
+
+        if save_xlim:
+            plotinfo.ax.set_xlim(xlim)
+
+
 
     def add_plot(self,tag):
         taginfo = self._taginfo[tag]
@@ -168,6 +215,19 @@ class PlotManager(QObject):
             plotinfo = self._groupid_plots[groupid]
             plotinfo.tagnames.append(tag)
             taginfo.plotinfo = plotinfo
+
+            # Only plot new tag so that zoom doesn't change
+            if DEBUG:
+                print("Adding tag to axis")
+
+            xlim = plotinfo.ax.get_xlim()
+
+            self._df[tag].plot(color=taginfo.color,
+                               ax=plotinfo.ax,
+                               legend=True)
+
+            plotinfo.ax.set_xlim(xlim)
+
         else:
             nplots = len(self._plotinfo)
 
@@ -198,9 +258,14 @@ class PlotManager(QObject):
             if groupid:
                 self._groupid_plots[groupid] = plotinfo
        
-        if DEBUG:
-            print("Replotting new axis")
-        self.replot(plotinfo)
+            if DEBUG:
+                print("Replotting new axis")
+
+            self.replot(plotinfo,save_xlim=(sharex!=None))
+
+            if DEBUG:
+                print("Clearing navstack")
+            self.plot_window.toolbar._nav_stack.clear()
 
 
     def remove_plot(self,tag):
@@ -219,7 +284,7 @@ class PlotManager(QObject):
                 print("Remaining tags:")
                 print(plotinfo.tagnames)
 
-            self.replot(plotinfo)
+            self.replot(plotinfo,save_xlim=True)
 
         else:
             # remove whole axes
@@ -260,19 +325,16 @@ class PlotManager(QObject):
         if DEBUG:
             print("PlotManager::add_remove_plot({},{})".format(tag,add))
 
-        interactive = plt.isinteractive()
-        if interactive:
-            plt.ioff()
+        try:
+            if add:
+                self.add_plot(tag)
+            else:
+                self.remove_plot(tag)
 
-        if add:
-            self.add_plot(tag)
-        else:
-            self.remove_plot(tag)
+            self.plot_window.canvas.draw()
+        except Exception as e:
+            sys.stderr.write(e)
 
-        self.plot_window.canvas.draw()
-
-        if interactive:
-            plt.ion()
 
     @QtCore.pyqtSlot()
     def showme(self):
@@ -331,6 +393,12 @@ class PlotWindow(QWidget):
     A single plot window.
 
     '''
+
+    # signal is emitted when home is clicked but navstack
+    # is empty
+    home_zoom_signal = QtCore.Signal()
+    
+
     def __init__(self,parent=None):
         QWidget.__init__(self,parent)
 
@@ -342,6 +410,24 @@ class PlotWindow(QWidget):
         layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
         self.setLayout(layout)
+
+        # find toolbar's home button
+        home_action = None
+        for action in self.toolbar.actions():
+            if action.text() == 'Home':
+                home_action = action
+                break
+
+        if home_action == None:
+            sys.stderr.write('Home action in Qt Navbar not found')
+        else:
+            home_action.triggered.connect(self.home_clicked)
+
+    @QtCore.pyqtSlot()
+    def home_clicked(self):
+        if self.toolbar._nav_stack.empty():
+            self.home_zoom_signal.emit()
+                
 
 
 
@@ -428,8 +514,6 @@ class ToolPanel(QWidget):
                 tool.setParent(None)
             except IndexError:
                 break
-            except Exception as e:
-                print(e)
 
 
     @QtCore.pyqtSlot(str)
@@ -449,7 +533,7 @@ class ToolPanel(QWidget):
             try:
                 tool.reset()
             except Exception as e:
-                print(e)
+                sys.stderr.write(e)
 
         if DEBUG:
             print("Emit clear clicked")
