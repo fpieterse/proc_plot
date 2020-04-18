@@ -1,4 +1,4 @@
-DEBUG=True
+DEBUG=False
 
 import pandas
 
@@ -128,7 +128,7 @@ class PlotManager(QObject):
         for tag in self._df:
             # Check if we can plot the tag
             dt = self._df[tag].dtype
-            if dt in (float,int,bool):
+            if dt in (float,int,bool,'int64'):
                 self._taginfo[tag] = TagInfo(tag)
             else:
                 if DEBUG:
