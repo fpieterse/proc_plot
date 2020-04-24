@@ -1,5 +1,33 @@
 DEBUG=False
 
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtCore import QObject
+
+    from PyQt5.QtWidgets import (
+            QApplication,
+            QWidget,
+            QMainWindow,
+            QMessageBox,
+            QTabWidget,
+            QVBoxLayout,
+            QHBoxLayout,
+            QLabel,
+            QLineEdit,
+            QPushButton,
+            QScrollArea,)
+except ImportError as e:
+    print("------------------------------")
+    print("|           ERROR            |")
+    print("------------------------------")
+    print("| Error importing PyQt5.     |")
+    print("| Install PyQt5:             |")
+    print("|    'pip install PyQt5'     |")
+    print("|            or              |")
+    print("|    'conda install pyqt'    |")
+    print("------------------------------")
+    raise e
+
 import pandas
 
 import matplotlib
@@ -9,22 +37,6 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavBar
 
 import re
-
-from PyQt5 import QtCore
-from PyQt5.QtCore import QObject
-
-from PyQt5.QtWidgets import (
-        QApplication,
-        QWidget,
-        QMainWindow,
-        QMessageBox,
-        QTabWidget,
-        QVBoxLayout,
-        QHBoxLayout,
-        QLabel,
-        QLineEdit,
-        QPushButton,
-        QScrollArea,)
 
 class TagInfoRule():
     def __init__(self,expr,color=None,sub=r'\1'):
