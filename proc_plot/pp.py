@@ -35,6 +35,7 @@ import matplotlib.pyplot as plt
 import sys
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavBar
+from matplotlib.widgets import MultiCursor
 
 import re
 
@@ -130,6 +131,8 @@ class PlotManager(QObject):
         self._plotinfo = [] # list of info about plot
         self._groupid_plots = {} # dictionary of plotted groupids
         self._taginfo = {} # dictionary of tags
+
+        self.cur = None
 
     def set_dataframe(self,df):
         self.clear_all_plots()
@@ -310,6 +313,12 @@ class PlotManager(QObject):
                 print("Clearing navstack")
             self.plot_window.toolbar._nav_stack.clear()
 
+            self.cur = MultiCursor(
+                self.plot_window.fig.canvas,
+                [ pi.ax for pi in self._plotinfo ],
+                lw=1,
+                color='red')
+
 
     def remove_plot(self,tag):
         taginfo = self._taginfo[tag]
@@ -334,7 +343,9 @@ class PlotManager(QObject):
             if DEBUG:
                 print("Removing axis")
             plotinfo.ax.remove()
+
             self._plotinfo.remove(plotinfo)
+
             if taginfo.groupid in self._groupid_plots:
                 del self._groupid_plots[taginfo.groupid] 
 
@@ -347,7 +358,15 @@ class PlotManager(QObject):
             if len(self._plotinfo) == 0:
                 if DEBUG:
                     print("no more plots left")
-                    self.plot_window.toolbar._nav_stack.clear()
+                self.plot_window.toolbar._nav_stack.clear()
+                self.cur = None
+            
+            else:
+                self.cur = MultiCursor(
+                    self.plot_window.fig.canvas,
+                    [ pi.ax for pi in self._plotinfo ],
+                    lw=1,
+                    color='red')
 
         taginfo.plotinfo = None
 
@@ -376,7 +395,8 @@ class PlotManager(QObject):
 
             self.plot_window.canvas.draw()
         except Exception as e:
-            sys.stderr.write(e)
+            sys.stderr.write('Exception in QtSlot PlotManager::add_remove_plot\n' \
+                + str(e) + '\n')
 
 
     @QtCore.pyqtSlot()
