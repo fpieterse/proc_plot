@@ -324,11 +324,13 @@ class PlotManager(QObject):
                 label=groupid,
                 sharex=sharex
             )
+            '''
             ax.xaxis.set_major_formatter(
                 pandas.plotting._matplotlib.converter.PandasAutoDateFormatter(
                     pandas.plotting._matplotlib.converter.PandasAutoDateLocator()
                 )
             )
+            '''
 
             if DEBUG:
                 print("label_outer for all other axis")
