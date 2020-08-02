@@ -1,4 +1,4 @@
-DEBUG=False
+DEBUG=True
 
 try:
     from PyQt5 import QtCore
@@ -58,6 +58,18 @@ class TagInfoRule():
         
         
 class PlotInfo():
+    '''
+    Contains information about one axes.
+
+    Parameters
+    ----------
+    tagnames : list
+        list of tagnames
+    ax : matplotlib.pyplot.axis
+        the axis this plotinfo is for
+    groupid : string
+        the groupid of this plotinfo/ax
+    '''
     def __init__(self,tagname,groupid,ax):
         self.tagnames = [tagname]
         self.ax = ax
@@ -225,20 +237,24 @@ class PlotManager(QObject):
         '''
         Replot the ax in plotinfo.  Used when adding/removing tags
         '''
+        if DEBUG:
+            print("PlotManager::replot()")
 
         if save_xlim:
+            if DEBUG:
+                print("Saving xlim")
             xlim = plotinfo.ax.get_xlim()
 
         plotinfo.ax.clear()
 
-        color = [ self._taginfo[t].color for t in plotinfo.tagnames ]
-        self._df.plot(
-            y=plotinfo.tagnames,
-            color=color,
-            ax=plotinfo.ax,
-            legend=True,
-            include_bool=True,
-        )
+        #color = [ self._taginfo[t].color for t in plotinfo.tagnames ]
+        for tagname in plotinfo.tagnames:
+            plotinfo.ax.plot(
+                self._df[tagname],
+                color=self._taginfo[tagname].color,
+                label=tagname,
+            )
+        plotinfo.ax.legend()
 
         if save_xlim:
             plotinfo.ax.set_xlim(xlim)
@@ -267,10 +283,18 @@ class PlotManager(QObject):
 
             xlim = plotinfo.ax.get_xlim()
 
+            plotinfo.ax.plot(
+                self._df[tag],
+                color=taginfo.color,
+                label=tag
+            )
+            plotinfo.ax.legend()
+            '''
             self._df[tag].plot(color=taginfo.color,
                                ax=plotinfo.ax,
                                legend=True,
                                include_bool=True)
+            '''
 
             plotinfo.ax.set_xlim(xlim)
 
@@ -298,11 +322,24 @@ class PlotManager(QObject):
                 label=groupid,
                 sharex=sharex
             )
+            ax.xaxis.set_major_formatter(
+                pandas.plotting._matplotlib.converter.PandasAutoDateFormatter(
+                    pandas.plotting._matplotlib.converter.PandasAutoDateLocator()
+                )
+            )
+
+            if DEBUG:
+                print("label_outer for all other axis")
+            for pi in self._plotinfo:
+                pi.ax.tick_params(labelbottom=False)
+
+
             plotinfo = PlotInfo(tag,groupid,ax)
             self._plotinfo.append(plotinfo)
             self._taginfo[tag].plotinfo = plotinfo
             if groupid:
                 self._groupid_plots[groupid] = plotinfo
+
        
             if DEBUG:
                 print("Replotting new axis")
@@ -367,6 +404,10 @@ class PlotManager(QObject):
                     [ pi.ax for pi in self._plotinfo ],
                     lw=1,
                     color='red')
+
+                self._plotinfo[-1].ax.tick_params(labelbottom=True)
+
+
 
         taginfo.plotinfo = None
 
@@ -588,6 +629,15 @@ class ToolPanel(QWidget):
     def clear_clicked(self):
         if DEBUG:
             print("ToolPanel::clear_clicked")
+
+        ans = QMessageBox.question(
+            None,
+            "Confirm clear","Are you sure you want to clear all plots?"
+        )
+        if (ans != QMessageBox.Yes):
+            if DEBUG:
+                print("Didn't click yes on the messagebox")
+            return
 
         for tool in self._tools:
             try:
