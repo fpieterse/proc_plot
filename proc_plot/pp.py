@@ -260,6 +260,8 @@ class PlotManager(QObject):
 
         if save_xlim:
             plotinfo.ax.set_xlim(xlim)
+        else:
+            plotinfo.ax.autoscale(axis='x',tight=True)
 
 
 
@@ -283,12 +285,13 @@ class PlotManager(QObject):
             if DEBUG:
                 print("Adding tag to axis")
 
-            xlim = plotinfo.ax.get_xlim()
+            #xlim = plotinfo.ax.get_xlim()
 
             plotinfo.ax.plot(
                 self._df[tag],
                 color=taginfo.color,
-                label=tag
+                label=tag,
+                scalex=False,
             )
             plotinfo.ax.legend()
             '''
@@ -298,7 +301,7 @@ class PlotManager(QObject):
                                include_bool=True)
             '''
 
-            plotinfo.ax.set_xlim(xlim)
+            #plotinfo.ax.set_xlim(xlim)
 
         else:
             nplots = len(self._plotinfo)
@@ -324,13 +327,6 @@ class PlotManager(QObject):
                 label=groupid,
                 sharex=sharex
             )
-            '''
-            ax.xaxis.set_major_formatter(
-                pandas.plotting._matplotlib.converter.PandasAutoDateFormatter(
-                    pandas.plotting._matplotlib.converter.PandasAutoDateLocator()
-                )
-            )
-            '''
 
             if DEBUG:
                 print("label_outer for all other axis")
