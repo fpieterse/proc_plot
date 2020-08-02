@@ -1,4 +1,4 @@
-DEBUG=True
+DEBUG=False
 
 try:
     from PyQt5 import QtCore
@@ -36,6 +36,8 @@ import sys
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavBar
 from matplotlib.widgets import MultiCursor
+
+import pyperclip
 
 import re
 
@@ -459,8 +461,8 @@ class PlotManager(QObject):
                     color.append( self._taginfo[tag].color )
 
                 xlim = plotinfo.ax.get_xlim()
-                x0 = pandas.Timestamp(xlim[0],unit='m')
-                x1 = pandas.Timestamp(xlim[1],unit='m')
+                x0 = matplotlib.dates.num2date(xlim[0])
+                x1 = matplotlib.dates.num2date(xlim[1])
                 ylim = plotinfo.ax.get_ylim()
 
                 code += 'df.plot(\n' + \
@@ -482,7 +484,11 @@ class PlotManager(QObject):
 
             code += 'fig.tight_layout()\n'
 
-        print(code)
+        #print(code)
+        pyperclip.copy(code)
+
+        code = ("<b>The following is copied to your clipboard:</b><br/>"
+                + code.replace('\n','<br/>').replace(" ",'&nbsp;') )
 
         QMessageBox.information(None, "Show Me",
                                       code,
