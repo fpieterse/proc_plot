@@ -18,6 +18,7 @@ proc_plot.show()
 ## Grouping Rules
 proc_plot uses regular expression rules to group tags that should be plotted on the same axis.
 See `help(proc_plot.add_grouping_rule)` for examples if you want to customise grouping rules.
+Since v1.4, the function load_grouping_template() makes it easy to load preconfigured grouping rules for different kinds of data.  v1.4 includes templates 'ProfCon' and 'DMC'.
 
 ## %matplotlib magic
 The intended use of the tool is to call it from a jupyter notebook.  The way the qt gui loop runs in jupyter is tricky.  proc_plot checks the current backend (plt.get_backend) to tell if the notebook is using `%matplotlib qt` or `%matplotlib notebook`.
