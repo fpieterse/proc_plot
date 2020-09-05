@@ -119,6 +119,8 @@ class TagInfo():
         for rule in self.taginfo_rules:
             match, gid = rule.get_groupid(self.name)
             if match:
+                if DEBUG:
+                    print('Rule match {} - {}'.format(tagname,rule.expr))
                 self.groupid=gid
                 self.color = rule.color
                 break
@@ -832,6 +834,67 @@ def print_grouping_rules():
         print("{:<3} {:<60} {:^10} {}"\
             .format(i, rule.expr, col, sub )
         )
+
+def load_grouping_template(template):
+    '''
+    Load a preconfigured grouping rule template instead of configuring grouping
+    rules manually.  
+
+    Templates
+    ---------
+    ProfCon : Honeywell Profit Controller history
+        - Groups .READVALUE, .HIGHLIMIT, .LOWLIMIT, .SSVALUE, .UNBIASEDMODELPV
+          per tag
+        - Groups .CONSTRAINTTYPE for MVs and CVs
+    DMC : Aspentech DMC plus history
+        - Groups .ULINMD .LLINDM .VIND .SSIND .LDEPTG .UDEPTG .DEP .SSDEP per tag
+        - Groups .SRVDEP for all tags
+        - Groups .SRIIND for all tags
+        - Groups .CSIDEP for all tags
+        - Groups .CSIIND for all tags
+
+
+    Parameters
+    ----------
+    template : string
+        String to define template.
+    '''
+
+    global _isInit
+
+    if _isInit:
+        print("Warning: changing the grouping rules will not have an effect",
+              "until you call set_dataframe() again.")
+        
+
+
+    if template == 'ProfCon':
+        add_grouping_rule(r'(.*)\.READVALUE','C0')
+        add_grouping_rule(r'(.*)\.HIGHLIMIT','red')
+        add_grouping_rule(r'(.*)\.LOWLIMIT','red')
+        add_grouping_rule(r'(.*)\.SSVALUE','cyan')
+        add_grouping_rule(r'(.*)\.UNBIASEDMODELPV','purple')
+        add_grouping_rule(r'(.*)(CV|MV)[0-9]{1,2}\.CONSTRAINTTYPE',sub=r'\2_CONSTRAINTTYPE')
+    elif template == 'DMC':
+        add_grouping_rule(r'(.*)\.VIND','C0')
+        add_grouping_rule(r'(.*)\.ULINDM','red')
+        add_grouping_rule(r'(.*)\.LLINDM','red')
+        add_grouping_rule(r'(.*)\.SSIND','cyan')
+
+        add_grouping_rule(r'(.*)\.DEP','C0')
+        add_grouping_rule(r'(.*)\.UDEPTG','red')
+        add_grouping_rule(r'(.*)\.LDEPTG','red')
+        add_grouping_rule(r'(.*)\.SSDEP','cyan')
+
+        add_grouping_rule(r'(.*)\.SRVDEP',sub='SRVDEP')
+        add_grouping_rule(r'(.*)\.SRIIND',sub='SRIIND')
+        add_grouping_rule(r'(.*)\.CSIDEP',sub='CSIDEP')
+        add_grouping_rule(r'(.*)\.CSIIND',sub='CSIIND')
+        
+    else:
+        print("Unknown template {}".format(template))
+
+        
         
 def set_dataframe(df):
     '''
