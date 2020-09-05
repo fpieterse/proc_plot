@@ -149,6 +149,7 @@ class PlotManager(QObject):
         self.cur = None
 
     def set_dataframe(self,df):
+        # package function set_dataframe checks that the index is datetime index
         self.clear_all_plots()
 
         self._df = df
@@ -849,6 +850,11 @@ def set_dataframe(df):
     global tool_panel
     global plot_window
     global plot_manager
+
+    # Check if dataframe has datetime index, this is not required but a
+    # worthwhile error check
+    if type(df.index) != pandas.DatetimeIndex:
+        sys.stderr.write("WARNING: Dataframe does not have a datetime index\n")
 
     if _isInit:
         tool_panel.remove_tagtools()
