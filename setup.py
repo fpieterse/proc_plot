@@ -1,5 +1,5 @@
 from setuptools import setup
-__version__ = '1.2'
+__version__ = '1.3'
 
 from os import path
 this_directory = path.abspath(path.dirname(__file__))
@@ -23,6 +23,7 @@ setup(
   install_requires=[
           'pandas',
           'matplotlib',
+          'pyperclip'
       ],
   classifiers=[
     'Development Status :: 5 - Production/Stable',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
