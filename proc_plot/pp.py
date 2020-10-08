@@ -536,8 +536,8 @@ class PlotWindow(QWidget):
 
     @QtCore.pyqtSlot()
     def home_clicked(self):
-        if self.toolbar._nav_stack.empty():
-            self.home_zoom_signal.emit()
+        self.home_zoom_signal.emit()
+        self.toolbar._nav_stack.clear()
                 
 
 
@@ -706,7 +706,7 @@ class TagTool(QWidget):
         self.plot_button.setChecked(False)
         self.blockSignals(False)
 
-def add_grouping_rule(expr,color=None,sub=r'\1'):
+def add_grouping_rule(expr,color=None,sub=r'\1',top=True):
     '''
     Add a rule to group trends.
 
@@ -786,12 +786,20 @@ def add_grouping_rule(expr,color=None,sub=r'\1'):
         regular expression replacement str to return groupid.  Default is r'\\1'
         which returns the first group in expr.  If set to None, then a groupid
         of None is returned (tag is ungrouped).
+    top : bool, optional
+        Set to false to add rule to bottom of rule list.  Default is to add
+        rules to bottom of rule list, the first rule that evaluates is used.
 
     '''
 
-    TagInfo.taginfo_rules.insert(0,
-        TagInfoRule(expr,color,sub)
-    )
+    if top:
+        TagInfo.taginfo_rules.insert(0,
+            TagInfoRule(expr,color,sub)
+        )
+    else:
+        TagInfo.taginfo_rules.append(
+            TagInfoRule(expr,color,sub)
+        )
 
 def remove_grouping_rules(index=None):
     '''
@@ -845,9 +853,9 @@ def load_grouping_template(template):
     ProfCon : Honeywell Profit Controller history
         - Groups .READVALUE, .HIGHLIMIT, .LOWLIMIT, .SSVALUE, .UNBIASEDMODELPV
           per tag
-        - Groups .CONSTRAINTTYPE for MVs and CVs
+        - Groups .CONSTRAINTTYPE and .STATUS for MVs and CVs
     DMC : Aspentech DMC plus history
-        - Groups .ULINMD .LLINDM .VIND .SSIND .LDEPTG .UDEPTG .DEP .SSDEP per tag
+        - Groups .ULINMD .LLINDM .VIND .SSMAN .LDEPTG .UDEPTG .SSDEP per tag
         - Groups .SRVDEP for all tags
         - Groups .SRIIND for all tags
         - Groups .CSIDEP for all tags
@@ -875,21 +883,25 @@ def load_grouping_template(template):
         add_grouping_rule(r'(.*)\.SSVALUE','cyan')
         add_grouping_rule(r'(.*)\.UNBIASEDMODELPV','purple')
         add_grouping_rule(r'(.*)(CV|MV)[0-9]{1,2}\.CONSTRAINTTYPE',sub=r'\2_CONSTRAINTTYPE')
+        add_grouping_rule(r'(.*)(CV|MV)[0-9]{1,2}\.STATUS',sub=r'\2_STATUS')
     elif template == 'DMC':
-        add_grouping_rule(r'(.*)\.VIND','C0')
+        # DMC has catch-all at bottom of list because .VIND and .DEP are not marked.
+        add_grouping_rule(r'(.*)','C0',top=False)
+
         add_grouping_rule(r'(.*)\.ULINDM','red')
         add_grouping_rule(r'(.*)\.LLINDM','red')
-        add_grouping_rule(r'(.*)\.SSIND','cyan')
+        add_grouping_rule(r'(.*)\.SSMAN','cyan')
 
-        add_grouping_rule(r'(.*)\.DEP','C0')
         add_grouping_rule(r'(.*)\.UDEPTG','red')
         add_grouping_rule(r'(.*)\.LDEPTG','red')
         add_grouping_rule(r'(.*)\.SSDEP','cyan')
+        add_grouping_rule(r'(.*)\.ETCV','lightgreen')
 
         add_grouping_rule(r'(.*)\.SRVDEP',sub='SRVDEP')
         add_grouping_rule(r'(.*)\.SRIIND',sub='SRIIND')
         add_grouping_rule(r'(.*)\.CSIDEP',sub='CSIDEP')
         add_grouping_rule(r'(.*)\.CSIIND',sub='CSIIND')
+        add_grouping_rule(r'(.*)\.ETMV','lightgreen')
         
     else:
         print("Unknown template {}".format(template))

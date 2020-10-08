@@ -189,8 +189,9 @@ if len(plot_manager._groupid_plots) != 1:
 
 proc_plot.remove_grouping_rules()
 proc_plot.load_grouping_template('ProfCon')
+proc_plot.set_dataframe(df)
 print("This will show the proc_plot window, make sure it works")
-print("ProcCon template was loaded, did it work?")
+print("ProfCon template was loaded, did it work?")
 proc_plot.show()
 
 print("All tests passed")
