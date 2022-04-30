@@ -888,20 +888,33 @@ def load_grouping_template(template):
         # DMC has catch-all at bottom of list because .VIND and .DEP are not marked.
         add_grouping_rule(r'(.*)','C0',top=False)
 
+        # MV Parameters
         add_grouping_rule(r'(.*)\.ULINDM','red')
         add_grouping_rule(r'(.*)\.LLINDM','red')
         add_grouping_rule(r'(.*)\.SSMAN','cyan')
+        add_grouping_rule(r'(.*)\.ETMV','lightgreen')
+        add_grouping_rule(r'(.*)\.VINDSP','gray')
 
+        # CV Parameters
         add_grouping_rule(r'(.*)\.UDEPTG','red')
         add_grouping_rule(r'(.*)\.LDEPTG','red')
         add_grouping_rule(r'(.*)\.SSDEP','cyan')
         add_grouping_rule(r'(.*)\.ETCV','lightgreen')
+        add_grouping_rule(r'(.*)\.PRDMDLD','magenta')
 
+        # Ramp Parameters
+        add_grouping_rule(r'(.*).LRDPTG','red','\1_RAMP')
+        add_grouping_rule(r'(.*).URDPTG','red','\1_RAMP')
+        add_grouping_rule(r'(.*).SSRDEP','cyan','\1_RAMP')
+        add_grouping_rule(r'(.*).RAMPSP','yellow')
+
+        # Generic Variable parameters: e.g. plot all CV statuses on the same
+        # trend
         add_grouping_rule(r'(.*)\.SRVDEP',sub='SRVDEP')
         add_grouping_rule(r'(.*)\.SRIIND',sub='SRIIND')
         add_grouping_rule(r'(.*)\.CSIDEP',sub='CSIDEP')
         add_grouping_rule(r'(.*)\.CSIIND',sub='CSIIND')
-        add_grouping_rule(r'(.*)\.ETMV','lightgreen')
+
         
     else:
         print("Unknown template {}".format(template))
