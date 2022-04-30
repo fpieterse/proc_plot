@@ -944,9 +944,9 @@ def load_grouping_template(template):
         add_grouping_rule(r'(.*)\.PRDMDLD','magenta')
 
         # Ramp Parameters
-        add_grouping_rule(r'(.*).LRDPTG','red','\1_RAMP')
-        add_grouping_rule(r'(.*).URDPTG','red','\1_RAMP')
-        add_grouping_rule(r'(.*).SSRDEP','cyan','\1_RAMP')
+        add_grouping_rule(r'(.*).LRDPTG','red',r'\1_RAMP')
+        add_grouping_rule(r'(.*).URDPTG','red',r'\1_RAMP')
+        add_grouping_rule(r'(.*).SSRDEP','cyan',r'\1_RAMP')
         add_grouping_rule(r'(.*).RAMPSP','yellow')
 
         # Generic Variable parameters: e.g. plot all CV statuses on the same
