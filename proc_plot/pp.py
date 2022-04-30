@@ -160,7 +160,14 @@ class PlotManager(QObject):
         self._taginfo.clear()
         self.clear_all_plots()
 
-        self._df = df
+        # Check if there are duplicated columns:
+        dupcols = df.columns[ df.columns.duplicated() ]
+        if len(dupcols) > 0:
+            sys.stderr.write('WARNING: Dataframe has duplicated columns, duplicates are being dropped.\n')
+            for c in dupcols:
+                sys.stderr.write('  Dropping {}\n'.format(c))
+
+        self._df = df.drop(columns=dupcols)
 
         for tag in self._df:
             # Check if we can plot the tag
@@ -404,10 +411,11 @@ class PlotManager(QObject):
                 del self._groupid_plots[taginfo.groupid] 
 
             nplots = len(self._plotinfo)
-            gs = matplotlib.gridspec.GridSpec(nplots,1)
-            for i in range(nplots):
-                self._plotinfo[i].ax.set_position( gs[i].get_position(self.plot_window.fig) )
-                self._plotinfo[i].ax.set_subplotspec( gs[i] )
+            if nplots > 0:
+                gs = matplotlib.gridspec.GridSpec(nplots,1)
+                for i in range(nplots):
+                    self._plotinfo[i].ax.set_position( gs[i].get_position(self.plot_window.fig) )
+                    self._plotinfo[i].ax.set_subplotspec( gs[i] )
 
             if len(self._plotinfo) == 0:
                 if DEBUG:
