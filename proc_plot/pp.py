@@ -152,10 +152,12 @@ class PlotManager(QObject):
 
     def set_dataframe(self,df):
         # package function set_dataframe checks that the index is datetime index
+
+        # clear the _taginfo to avoid unnecesary looping in clear_all_plots
+        self._taginfo.clear()
         self.clear_all_plots()
 
         self._df = df
-        self._taginfo.clear()
 
         for tag in self._df:
             # Check if we can plot the tag
@@ -207,11 +209,18 @@ class PlotManager(QObject):
             print('PlotManager::clear_all_plots()')
 
         try:
-            
+          
+            # Clear plot info for all tags (not just the ones that are known to
+            # be plotted
+            for t in self._taginfo:
+                self._taginfo[t].plotinfo = None
+           
+            '''
             while len(self._plotinfo) > 0:
                 p = self._plotinfo.pop()
                 for t in p.tagnames:
                     self._taginfo[t].plotinfo = None
+            '''
             
             self._plotinfo.clear()
             self._groupid_plots.clear()
@@ -491,7 +500,7 @@ class PlotManager(QObject):
 
                 i += 1
 
-
+            code += "for a in ax:\n    a.legend(loc='upper left')\n"
             code += 'fig.tight_layout()\n'
 
         #print(code)
