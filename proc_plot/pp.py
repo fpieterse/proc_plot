@@ -259,7 +259,7 @@ class PlotManager(QObject):
                 color=self._taginfo[tagname].color,
                 label=tagname,
             )
-        plotinfo.ax.legend()
+        plotinfo.ax.legend(loc='upper left')
 
         if save_xlim:
             plotinfo.ax.set_xlim(xlim)
@@ -296,7 +296,7 @@ class PlotManager(QObject):
                 label=tag,
                 scalex=False,
             )
-            plotinfo.ax.legend()
+            plotinfo.ax.legend(loc='upper left')
             '''
             self._df[tag].plot(color=taginfo.color,
                                ax=plotinfo.ax,
