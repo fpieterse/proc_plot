@@ -453,6 +453,20 @@ class PlotManager(QObject):
         code = ''
 
         if nrows > 0:
+            # Create a copy of the dataframe with only displayed data
+            # instead of setting xlimits. to plot faster.
+
+            # xlimit based on first axes, the rest should be the same
+            # this code is only executed if there is at least one plot
+               
+            if ( type(self._df.index) != pandas.DatetimeIndex):
+                code += "df_plot = df\n"
+            else:
+                xlim = self._plotinfo[0].ax.get_xlim()
+                x0 = matplotlib.dates.num2date(xlim[0]).strftime('%Y-%m-%d %H:%M')
+                x1 = matplotlib.dates.num2date(xlim[1]).strftime('%Y-%m-%d %H:%M')
+                code += "df_plot = df['" + x0 + "':'" + x1 + "']\n"
+
             code += 'fig,ax = plt.subplots(nrows={},sharex=True)\n'.format(nrows)
 
             i = 0 
@@ -461,16 +475,11 @@ class PlotManager(QObject):
                 for tag in plotinfo.tagnames:
                     color.append( self._taginfo[tag].color )
 
-                xlim = plotinfo.ax.get_xlim()
-                x0 = matplotlib.dates.num2date(xlim[0])
-                x1 = matplotlib.dates.num2date(xlim[1])
                 ylim = plotinfo.ax.get_ylim()
 
-                code += 'df.plot(\n' + \
+                code += 'df_plot.plot(\n' + \
                         '    y={},\n'.format(plotinfo.tagnames) + \
                         '    color={},\n'.format(color) + \
-                        '    xlim=("' + x0.strftime('%Y-%m-%d %H:%M') +'",\n' + \
-                        '          "' + x1.strftime('%Y-%m-%d %H:%M') + '"),\n' + \
                         '    ylim={},\n'.format(ylim)
 
                 if nrows > 1:
