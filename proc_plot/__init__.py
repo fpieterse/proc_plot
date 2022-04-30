@@ -10,14 +10,18 @@ from .pp import add_grouping_rule, \
                 remove_grouping_rules, \
                 print_grouping_rules, \
                 load_grouping_template, \
-                set_dataframe, show
+                set_dataframe, show, \
+                set_legend_fontsize, \
+                set_legend_loc
 
 __all__ = ['add_grouping_rule',
            'remove_grouping_rules',
            'print_grouping_rules',
            'load_grouping_template',
            'set_dataframe',
-           'show']
+           'show',
+           'set_legend_fontsize',
+           'set_legend_loc']
 
 
 #show = proc_plot.pp.show

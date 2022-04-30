@@ -150,6 +150,9 @@ class PlotManager(QObject):
 
         self.cur = None
 
+        self.legend_loc = 'upper left'
+        self.legend_fontsize = 8
+
     def set_dataframe(self,df):
         # package function set_dataframe checks that the index is datetime index
 
@@ -268,7 +271,8 @@ class PlotManager(QObject):
                 color=self._taginfo[tagname].color,
                 label=tagname,
             )
-        plotinfo.ax.legend(loc='upper left')
+        plotinfo.ax.legend(loc=self.legend_loc,
+                           fontsize=self.legend_fontsize)
 
         if save_xlim:
             plotinfo.ax.set_xlim(xlim)
@@ -305,7 +309,8 @@ class PlotManager(QObject):
                 label=tag,
                 scalex=False,
             )
-            plotinfo.ax.legend(loc='upper left')
+            plotinfo.ax.legend(loc=self.legend_loc,
+                               fontsize=self.legend_fontsize)
             '''
             self._df[tag].plot(color=taginfo.color,
                                ax=plotinfo.ax,
@@ -500,7 +505,17 @@ class PlotManager(QObject):
 
                 i += 1
 
-            code += "for a in ax:\n    a.legend(loc='upper left')\n"
+            if type(self.legend_loc) == str:
+                loccode = "loc='{}'".format(self.legend_loc)
+            else:
+                loccode = "loc={}".format(self.legend_loc)
+            if type(self.legend_fontsize) == str:
+                fontcode = "fontsize='{}'".format(self.legend_fontsize)
+            else:
+                fontcode = "fontsize={}".format(self.legend_fontsize)
+
+            code += "for a in ax:\n    a.legend({},{})\n".format(
+                loccode,fontcode)
             code += 'fig.tight_layout()\n'
 
         #print(code)
@@ -938,7 +953,39 @@ def load_grouping_template(template):
         print("Unknown template {}".format(template))
 
         
-        
+def set_legend_fontsize(size):
+    '''
+    Parameters:
+    -----------
+    size : int or {'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'}
+        font size that can be passed to a matplotlib axes.legend function
+
+    '''
+    plot_manager.legend_fontsize = size
+def set_legend_loc(loc):
+    '''
+    Parameters:
+    -----------
+    loc : int or string
+        legend location that can be passed to matplotlib axes.legend function.
+            ===============   =============
+            Location String   Location Code
+            ===============   =============
+            'best'            0
+            'upper right'     1
+            'upper left'      2
+            'lower left'      3
+            'lower right'     4
+            'right'           5
+            'center left'     6
+            'center right'    7
+            'lower center'    8
+            'upper center'    9
+            'center'          10
+            ===============   =============
+    '''
+    plot_manager.legend_loc = loc
+
 def set_dataframe(df):
     '''
     Set the dataframe to use for plotting.
