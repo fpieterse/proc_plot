@@ -1,5 +1,5 @@
 from setuptools import setup
-__version__ = '1.6'
+__version__ = '1.7'
 
 from os import path
 this_directory = path.abspath(path.dirname(__file__))
