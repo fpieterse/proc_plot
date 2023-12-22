@@ -46,6 +46,9 @@ assert (proc_plot.pp._execApp == False), \
 print("Main window is showing without gui loop, it should stay up")
 proc_plot.show()
 
-input('Press a button')
+a = input('Write something to test if underlying code can continue: ')
+print('You wrote',a)
+a = input('Press enter to end program')
+
 
 

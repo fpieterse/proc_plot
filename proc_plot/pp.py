@@ -208,10 +208,8 @@ class PlotManager(QObject):
                     pi.ax.autoscale(axis='y',tight=False)
             self.plot_window.canvas.draw()
 
-            
-            
         except Exception as e:
-            sys.stderr.write(e)
+            sys.stderr.write(str(e))
 
     @QtCore.pyqtSlot()
     def clear_all_plots(self):
@@ -238,24 +236,30 @@ class PlotManager(QObject):
             self.plot_window.toolbar._nav_stack.clear()
             self.plot_window.canvas.draw()
         except Exception as e:
-            sys.stderr.write(e)
+            sys.stderr.write(str(e))
             
 
   
     @QtCore.pyqtSlot()
     def refresh(self):
-        try:
-            if DEBUG:
-                print("PlotManager::refresh()")
+        if DEBUG:
+            print("PlotManager::refresh()")
 
-            for pi in self._plotinfo:
+        for pi in self._plotinfo:
+            try:
                 self.replot(pi)
+            except Exception as e:
+                sys.stderr.write(str(e))
 
-            self.plot_window.toolbar._nav_stack.clear()
+        self.plot_window.toolbar._nav_stack.clear()
+        try:
             self.plot_window.fig.tight_layout()
             self.plot_window.canvas.draw()
         except Exception as e:
-            sys.stderr.write(e)
+            # This seems to throw an error when using jupyter notebook
+            if DEBUG:
+                sys.stderr.write("Error setting tight layout")
+                sys.stderr.write(str(e))
 
     def replot(self,plotinfo,save_xlim=False):
         '''
@@ -265,11 +269,14 @@ class PlotManager(QObject):
             print("PlotManager::replot()")
 
         if save_xlim:
-            if DEBUG:
-                print("Saving xlim")
             xlim = plotinfo.ax.get_xlim()
 
-        plotinfo.ax.clear()
+        try:
+            plotinfo.ax.clear()
+        except:
+            if DEBUG:
+                print("Error clearing Axis")
+
 
         #color = [ self._taginfo[t].color for t in plotinfo.tagnames ]
         for tagname in plotinfo.tagnames:
@@ -280,6 +287,7 @@ class PlotManager(QObject):
             )
         plotinfo.ax.legend(loc=self.legend_loc,
                            fontsize=self.legend_fontsize)
+
 
         if save_xlim:
             plotinfo.ax.set_xlim(xlim)
@@ -337,23 +345,18 @@ class PlotManager(QObject):
                 sharex = None
 
             # resize existing axes
-            if DEBUG:
-                print("Resize existing axes")
             gs = matplotlib.gridspec.GridSpec(nplots+1,1)
             for i in range(nplots):
                 self._plotinfo[i].ax.set_position( gs[i].get_position(self.plot_window.fig) )
                 self._plotinfo[i].ax.set_subplotspec( gs[i] )
 
-            if DEBUG:
-                print("Create new axes")
+
             ax = self.plot_window.fig.add_subplot(
                 nplots+1,1,nplots+1,
                 label=groupid,
                 sharex=sharex
             )
 
-            if DEBUG:
-                print("label_outer for all other axis")
             for pi in self._plotinfo:
                 pi.ax.tick_params(labelbottom=False)
 
@@ -364,21 +367,25 @@ class PlotManager(QObject):
             if groupid:
                 self._groupid_plots[groupid] = plotinfo
 
-       
-            if DEBUG:
-                print("Replotting new axis")
 
             self.replot(plotinfo,save_xlim=(sharex!=None))
 
-            if DEBUG:
-                print("Clearing navstack")
             self.plot_window.toolbar._nav_stack.clear()
 
+
+            # Multicursor screws with ylims, save all the ylims and restore them
+            # later
+            axes = [pi.ax for pi in self._plotinfo ]
+            ylims = [ a.get_ylim() for a in axes ]
+
             self.cur = MultiCursor(
-                self.plot_window.fig.canvas,
+                None,#self.plot_window.fig.canvas,
                 [ pi.ax for pi in self._plotinfo ],
                 lw=1,
                 color='red')
+
+            for a,yl in zip(axes,ylims):
+                a.set_ylim(yl)
 
 
     def remove_plot(self,tag):
