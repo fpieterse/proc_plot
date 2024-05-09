@@ -30,6 +30,12 @@ plot_manager = proc_plot.pp.plot_manager
 ############################################################################
 # --- TEST:  Gui loop should not be executed if %qt is magic is used   --- #
 #            in a jupyter notebook.                                        #
+#        I'm not sure anymore what this is supposed to test.  I think      #
+#        the idea is that the plot should stay open and allow other        #
+#        cells in notebook to execute.  This is only useful if you         #
+#        are definitely never going to go back to qt window, so don't      #
+#        use it.                                                           #
+#                                                                          #
 ############################################################################
 ############################################################################
 
@@ -39,10 +45,7 @@ proc_plot.show()
 print("Main window is showing again, it should block code again")
 proc_plot.show()
 
-proc_plot.pp.set_exec_on_show(False)
-assert (proc_plot.pp._execApp == False), \
-    "_execApp not set correctly"
-
+matplotlib.use("svg")
 print("Main window is showing without gui loop, it should stay up")
 proc_plot.show()
 

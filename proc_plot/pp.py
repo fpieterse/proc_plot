@@ -205,7 +205,17 @@ class PlotManager(QObject):
             if len(self._plotinfo) > 0:
                 for pi in self._plotinfo:
                     pi.ax.autoscale(axis='x',tight=True)
-                    pi.ax.autoscale(axis='y',tight=False)
+
+                    # Autoscale on y doesn't work.  I think the cursor is making
+                    # trouble.  Just scale it manually.
+                    #pi.ax.autoscale(axis='y',tight=False)
+                    ymin = float( self._df[ pi.tagnames ].min().min() )
+                    ymax = float( self._df[ pi.tagnames ].max().max() )
+                    margin = 0.05*(ymax-ymin)
+                    if margin <= 0:
+                        margin = 0.01
+                        
+                    pi.ax.set_ylim( ymin-margin,ymax+margin)
             self.plot_window.canvas.draw()
 
         except Exception as e:
@@ -318,6 +328,9 @@ class PlotManager(QObject):
 
             #xlim = plotinfo.ax.get_xlim()
 
+            # Get current y-lim before plotting:
+            ylim_before = plotinfo.ax.get_ylim()
+
             plotinfo.ax.plot(
                 self._df[tag],
                 color=taginfo.color,
@@ -326,14 +339,15 @@ class PlotManager(QObject):
             )
             plotinfo.ax.legend(loc=self.legend_loc,
                                fontsize=self.legend_fontsize)
-            '''
-            self._df[tag].plot(color=taginfo.color,
-                               ax=plotinfo.ax,
-                               legend=True,
-                               include_bool=True)
-            '''
 
             #plotinfo.ax.set_xlim(xlim)
+
+            # Set the y-lim to accommodate newly plotted value
+            margin = 0.05*(ylim_before[1] - ylim_before[0])
+            ymin = float( min(ylim_before[0], self._df[ tag ].min()-margin) )
+            ymax = float( max(ylim_before[1], self._df[ tag ].max()+margin) )
+                
+            plotinfo.ax.set_ylim( ymin,ymax)
 
         else:
             nplots = len(self._plotinfo)
@@ -1039,7 +1053,6 @@ def show():
     '''
     global main_window
     global _isInit
-    global _execApp
 
     if not _isInit:
         sys.stderr.write('Dataframe is not initialised, use set_dataframe to'
@@ -1051,40 +1064,27 @@ def show():
     if DEBUG:
         print("Showing main window")
 
-    if _execApp:
+    if DEBUG:
+        print("Backend: ", plt.get_backend())
+        print("Interactive: ", plt.isinteractive())
+
+    # For Qt backends, the GUI loop is already running, don't call app.exec()
+    if ( (plt.get_backend().lower() in ['qt5agg','qtagg'] ) and
+        plt.isinteractive() ):
+        # Do Nothing
+        pass
+    else:
         app.exec_()
-        app.exit()
+        # app.exit() is useful if you want to be able to continue to execute
+        # other code cells in a jupyter notebook.  It however breaks the
+        # notebook the next time you switch to a qt backend.  So don't do it
+        #app.exit()
 
-def set_exec_on_show(on=True):
-    '''
-    Set whether Qt app .exec function should be called on show().  When
-    proc_plot is used in a jupyter notebook with %matplotlib qt magic then the
-    gui loop is already running and starting it again will break the app.
-    proc_plot tries to figure it out automatically but you can override the
-    setting with this function.
 
-    Parameters:
-    -----------
-    on : bool, optional
-        set to False to disable runnnig app.exec.
-
-    '''
-    global _execApp
-    _execApp = on
 
 _isInit = False # has the window been initialised with a dataframe?
-_execApp = True # if started with qt, gui loop is running
 
-if DEBUG:
-    print("Backend: ", plt.get_backend())
 
-if (plt.get_backend().lower() == 'qt5agg' and
-    plt.isinteractive() ):
-    # looks like you are running a jupyter notebook with %matplotlib qt
-    _execApp = False
-    print("It looks like you are running a jupyter notebook with " \
-         +"%matplotlib qt magic.\nThe gui loop is disabled, if you " \
-         +"want to enable it, use proc_plot.set_exec_on_show()")
 
 app = QtCore.QCoreApplication.instance()
 if app is None:
